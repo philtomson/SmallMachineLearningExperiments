@@ -118,9 +118,9 @@ end
  # sigmoid:             0.345           0.351        2.21
 function build_model()
    return Chain(
-      Dense(WIDTH,   WIDTH*2,    celu ),
-      Dense(WIDTH*2, WIDTH,      celu ),
-      Dense(WIDTH,   NUMCLASSES, celu ),
+      Dense(WIDTH,   WIDTH*2,    relu6 ),
+      Dense(WIDTH*2, WIDTH,      relu6 ),
+      Dense(WIDTH,   NUMCLASSES, relu6 ),
       softmax)
 end
 
@@ -149,54 +149,19 @@ function train_it(; kws...)
     return m, train_data, test_data
 end
 
-function find_all_mismatches()
-   for (x,y) in test_data
-      if onecold(cpu(model(x))) != onecold(cpu(y))
-          @show onecold(cpu(model(x))) #forward
-          @show onecold(y)
-          @show x
-          @show sum(x)
-          @show y
-      end
-    end
-end
+examine(x, y, ypred) = (onecold(y) != onecold(ypred) && @show(x, sum(x), onecold(y), onecold(ypred), ypred))
 
-function find_all_matching(data, num=1 )
-   for (x,y) in data
-      if sum(x) == num
-          @show onecold(cpu(model(x))) #forward
-          @show onecold(y)
-          @show x
-          @show sum(x)
-          @show y
-      end
-    end
-end
+examine_n(n, x, y, ypred) = (sum(x) == n && @show(x, sum(x), onecold(y), onecold(ypred), ypred))
 
-function find_all_mismatches_gt(num=0)
-   for (x,y) in test_data
-      num_errors = abs(onecold(cpu(model(x)))[1] - onecold(cpu(y))[1])
-      if num_errors > num
-          @show onecold(cpu(model(x))) #forward
-          @show onecold(y)
-          @show x
-          @show sum(x)
-          @show y
-      end
-    end
-end
-
-function find_all_matches()
-   for (x,y) in test_data
-      if onecold(cpu(model(x))) == onecold(cpu(y))
-          @show onecold(cpu(model(x))) #forward
-          @show onecold(y)
-          @show x
-          @show sum(x)
-          @show y
-      end
-    end
+function find_all_mismatching(dataset)
+   for (x, y) in cpu.(dataset)
+      ypred = cpu(model)(x)
+      examine.(eachcol(x), eachcol(y), eachcol(ypred))
+   end
 end
 
 model, train_data, test_data = train_it()
+
+find_all_mismatching(test_data)
+
 
