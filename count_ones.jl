@@ -30,6 +30,7 @@ function bitarray_2_num(arr)
    sum(((i, x),) -> Int(x) << ((i-1) * sizeof(x)), enumerate(arr.chunks))
 end
 
+ # create unique training and test cases
 function create_testcases(num_tcs, sz, classes=10)
    train_cases = []
    test_cases = []
@@ -58,7 +59,7 @@ end
 
 @with_kw mutable struct Args
     η::Float64 = 3e-4       # learning rate
-    batchsize::Int = 100    # batch size
+    batchsize::Int = 200    # batch size
     epochs::Int = 70       # number of epochs
     device::Function = gpu  # set as gpu, if gpu available
 end
@@ -153,15 +154,60 @@ examine(x, y, ypred) = (onecold(y) != onecold(ypred) && @show(x, sum(x), onecold
 
 examine_n(n, x, y, ypred) = (sum(x) == n && @show(x, sum(x), onecold(y), onecold(ypred), ypred))
 
+examine_pred(pred, x, y, yp) = (pred && @show(x, sum(x), onecold(y), onecold(yp), yp))
+
 function find_all_mismatching(dataset)
    for (x, y) in cpu.(dataset)
       ypred = cpu(model)(x)
-      examine.(eachcol(x), eachcol(y), eachcol(ypred))
+      examine_pred.((onecold(y) != onecold(ypred)), eachcol(x), eachcol(y), eachcol(ypred))
    end
 end
 
+@with_kw mutable struct Entry
+   passing::Int = 0
+   failing::Int = 0
+   #failvals::Dict = Dict()
+end
+
+function stat_entry(stats)
+   function aux( y, ypred)
+      ground_truth = onecold(y)
+      if(ground_truth != onecold(ypred))
+          if !haskey(stats, ground_truth )
+             stats[ground_truth] = Entry()
+          end
+          stats[ground_truth].failing += 1
+      else
+          if !haskey(stats, ground_truth )
+             stats[ground_truth] = Entry()
+          end
+          stats[ground_truth].passing += 1
+      end
+   end
+   return aux
+end
+
+function stats(dataset)
+   stats = Dict()
+   stat_ent = stat_entry(stats)
+   for (x,y) in cpu.(dataset)
+      ypred = cpu(model)(x)
+      stat_ent.(eachcol(y), eachcol(ypred))
+   end
+   for (k,v) in sort(stats)
+      println("$k =>\t  passes: $(v.passing)\t  fails: $(v.failing)")
+   end
+   return stats
+end
+
+
 model, train_data, test_data = train_it()
 
-find_all_mismatching(test_data)
+ #find_all_mismatching(test_data)
+
+println("Training Data stats: ")
+stats(train_data)
+println("\nTest Data stats: ")
+stats(test_data)
 
 
