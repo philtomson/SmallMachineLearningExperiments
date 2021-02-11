@@ -117,15 +117,25 @@ end
  # mish:       crash         
  # rrelu:      crash
  # sigmoid:             0.345           0.351        2.21
-function build_model()
+#activation_fns = [ celu, elu, gelu, hardsigmoid, hardtanh, leakyrelu,
+#                   lisht, logcosh, logsigmoid, mish, relu, relu6,
+#                  rrelu, selu, sigmoid, softplus, softshrink, 
+#                  softsign, swish, tanhshrink, trelu ]
+ # Note: mish, rrelu do not work on GPU; trelu is redundant
+activation_fns = [ celu, elu, gelu, hardsigmoid, hardtanh, leakyrelu,
+                   lisht, logcosh, logsigmoid, relu, relu6,
+                   selu, sigmoid, softplus, softshrink, 
+                   softsign, tanhshrink ]
+
+function build_model(act_fn)
    return Chain(
-      Dense(WIDTH,   WIDTH*2,    relu6 ),
-      Dense(WIDTH*2, WIDTH,      relu6 ),
-      Dense(WIDTH,   NUMCLASSES, relu6 ),
+      Dense(WIDTH,   WIDTH*2,    act_fn ),
+      Dense(WIDTH*2, WIDTH,      act_fn ),
+      Dense(WIDTH,   NUMCLASSES, act_fn ),
       softmax)
 end
 
-function train_it(; kws...)
+function train_it(af; kws...)
     # Initializing Model parameters 
     args = Args(; kws...)
 
@@ -133,7 +143,7 @@ function train_it(; kws...)
     train_data,test_data = getdata(args)
 
     # Construct model
-    m = build_model()
+    m = build_model(af)
     train_data = args.device.(train_data)
     test_data = args.device.(test_data)
     m = args.device(m)
@@ -187,27 +197,37 @@ function stat_entry(stats)
    return aux
 end
 
-function stats(dataset)
+function stats(model, dataset)
    stats = Dict()
    stat_ent = stat_entry(stats)
    for (x,y) in cpu.(dataset)
       ypred = cpu(model)(x)
       stat_ent.(eachcol(y), eachcol(ypred))
    end
+   total_passes = 0
+   total_fails  = 0
    for (k,v) in sort(stats)
       println("$k =>\t  passes: $(v.passing)\t  fails: $(v.failing)")
+      total_passes += v.passing
+      total_fails  += v.failing
    end
+   pass_percent = 100*(total_passes)/(total_passes + total_fails)
+   @show pass_percent
    return stats
 end
 
-
-model, train_data, test_data = train_it()
+for af in activation_fns
+   @show af
+   model, train_data, test_data = train_it(af)
+   println("Training Data stats: for $af")
+   stats(model,train_data)
+   println("\nTest Data stats: for $af")
+   stats(model,test_data)
+   println("-----------------------------------------------------------\n")
+end
 
  #find_all_mismatching(test_data)
 
-println("Training Data stats: ")
-stats(train_data)
-println("\nTest Data stats: ")
-stats(test_data)
+
 
 
