@@ -107,6 +107,17 @@ function accuracy(data_loader, model)
     end
     acc/length(data_loader)
 end
+
+ #sqrt_relu(x) = max(zero(x), sqrt(abs(x)))
+function sqrt_relu(x) 
+    if(x > 0)
+      sqrt(x)
+   else
+      float(x)
+   end
+   #why does this fail?: x > 0 ? sqrt(x) : float(x)
+end
+
  # ativation func train accuracy  test accuracy:  final loss: 
  # relu:                0.688           0.7          1.768
  # relu: wid*3 in mid   0.775           0.775        1.679
@@ -125,7 +136,7 @@ end
 activation_fns = [ celu, elu, gelu, hardsigmoid, hardtanh, leakyrelu,
                    lisht, logcosh, logsigmoid, relu, relu6,
                    selu, sigmoid, softplus, softshrink, 
-                   softsign, tanhshrink ]
+                   softsign, tanhshrink, sqrt_relu ]
 
 function build_model(act_fn)
    return Chain(
@@ -216,6 +227,7 @@ function stats(model, dataset)
    return stats
 end
 
+
 for af in activation_fns
    @show af
    model, train_data, test_data = train_it(af)
@@ -226,7 +238,6 @@ for af in activation_fns
    println("-----------------------------------------------------------\n")
 end
 
- #find_all_mismatching(test_data)
 
 
 
