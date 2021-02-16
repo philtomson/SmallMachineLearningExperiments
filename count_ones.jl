@@ -108,15 +108,12 @@ function accuracy(data_loader, model)
     acc/length(data_loader)
 end
 
- #sqrt_relu(x) = max(zero(x), sqrt(abs(x)))
-function sqrt_relu(x) 
-    if(x > 0)
-      sqrt(x)
-   else
-      float(x)
-   end
-   #why does this fail?: x > 0 ? sqrt(x) : float(x)
+ #rec_sqrt (x) = max(zero(x), sqrt(abs(x)))
+function rec_sqrt(x) 
+ x > 0 ? sqrt(x) : x
 end
+
+
 
  # ativation func train accuracy  test accuracy:  final loss: 
  # relu:                0.688           0.7          1.768
@@ -133,10 +130,10 @@ end
 #                  rrelu, selu, sigmoid, softplus, softshrink, 
 #                  softsign, swish, tanhshrink, trelu ]
  # Note: mish, rrelu do not work on GPU; trelu is redundant
-activation_fns = [ celu, elu, gelu, hardsigmoid, hardtanh, leakyrelu,
+activation_fns = [ rec_sqrt, celu, elu, gelu, hardsigmoid, hardtanh, leakyrelu,
                    lisht, logcosh, logsigmoid, relu, relu6,
                    selu, sigmoid, softplus, softshrink, 
-                   softsign, tanhshrink, sqrt_relu ]
+                   softsign, tanhshrink ]
 
 function build_model(act_fn)
    return Chain(
@@ -227,17 +224,22 @@ function stats(model, dataset)
    return stats
 end
 
-
-for af in activation_fns
-   @show af
-   model, train_data, test_data = train_it(af)
-   println("Training Data stats: for $af")
-   stats(model,train_data)
-   println("\nTest Data stats: for $af")
-   stats(model,test_data)
-   println("-----------------------------------------------------------\n")
+function run_fns(afns=activation_fns)
+   for af in afns
+      @show af
+      model, train_data, test_data = train_it(af)
+      println("Training Data stats: for $af")
+      stats(model,train_data)
+      println("\nTest Data stats: for $af")
+      stats(model,test_data)
+      println("-----------------------------------------------------------\n")
+   end
 end
 
+#run the best two activation fns 4x
+for i in 1:4
+   run_fns([rec_sqrt, tanhshrink])
+end
 
 
 
