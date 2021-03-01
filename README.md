@@ -9,6 +9,10 @@ The main idea is to create small ML models that can be trained in a matter of mi
 
 * **parity_cgp.jl**: Uses CartesianGeneticProgramming.jl to evolve a circuit for calculating parity of an 8-bit word.
 
+Example evolved circuit for 8 bit parity: 
+
+![main window](images/parity_graph.png)
+
 ## Ideas
 
 * Try removing neurons (replacing weights with zeros would probably be the easiest) in a trained network to figure out which neurons have the least effect on the ouput.
