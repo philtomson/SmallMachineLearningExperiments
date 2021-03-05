@@ -53,7 +53,7 @@ end
 @with_kw mutable struct Args
     η::Float64 = 3e-4       # learning rate
     batchsize::Int = 1    # batch size
-    epochs::Int = 170       # number of epochs
+    epochs::Int = 1500       # number of epochs
     device::Function = cpu  # set as gpu, if gpu available
 end
 
@@ -101,16 +101,6 @@ end
 
 
 
- # ativation func train accuracy  test accuracy:  final loss: 
- # relu:                0.688           0.7          1.768
- # relu: wid*3 in mid   0.775           0.775        1.679
- # relu6:               0.994           1.0          1.493         
- # celu:                0.993           1.0          1.467
- # gelu:                0.774           0.7606       1.679
- # selu:                0.882           0.883        1.575
- # mish:       crash         
- # rrelu:      crash
- # sigmoid:             0.345           0.351        2.21
 #activation_fns = [ celu, elu, gelu, hardsigmoid, hardtanh, leakyrelu,
 #                   lisht, logcosh, logsigmoid, mish, relu, relu6,
 #                  rrelu, selu, sigmoid, softplus, softshrink, 
@@ -123,8 +113,8 @@ activation_fns = [ rec_sqrt, celu, elu, gelu, hardsigmoid, hardtanh, leakyrelu,
 
 function build_model(act_fn)
    return Chain(
-      Dense(WIDTH,   WIDTH*2,    act_fn ),
-      Dense(WIDTH*2, WIDTH,      act_fn ),
+      Dense(WIDTH,   WIDTH,    act_fn ),
+      #Dense(WIDTH*2, WIDTH,      act_fn ),
       Dense(WIDTH,   1, act_fn )
       )
 end
@@ -133,32 +123,22 @@ function train_it(af; kws...)
     # Initializing Model parameters 
     args = Args(; kws...)
 
-    # Load Data
-    #train_data,test_data = getdata(args)
-
     # Construct model
     m = build_model(af)
-    #train_data = args.device.(train_data)
-    #test_data = args.device.(test_data)
     m = args.device(m)
     loss(x,y) = Flux.mse(m(x), y)
     
     ## Training
-    #evalcb = () -> @show(loss_all(train_data, m))
     evalcb = () -> @show(loss_all([(trainX,trainY)], m))
     opt = ADAM(args.η)
 		
-    #trainy = onehotbatch(trainY, 1:2)
     trainy = [[i==false, i==true] for i in trainY]
     trainy = vcat(trainy...)
     @show size(trainy)
 
-    #@epochs args.epochs Flux.train!(loss, params(m), train_data, opt, cb = evalcb)
     @epochs args.epochs Flux.train!(loss, params(m), [(trainX,trainY)], opt, cb = evalcb)
 
-    #@show accuracy(train_data, m)
     #@show accuracy([trainX,trainY], m)
-    #@show accuracy(test_data, m)
     return m, [(trainX,trainY)]
 end
 
@@ -232,13 +212,8 @@ end
 
 model, train_data = train_it(relu)
 
-#run the best two activation fns 4x
-#for i in 1:4
-#   run_fns([rec_sqrt, tanhshrink])
-#end
-
 for i in 1:100
    @show (i, model(train_data[1][1][:,i]), train_data[1][1][:,i])
-   end
+end
 
 
